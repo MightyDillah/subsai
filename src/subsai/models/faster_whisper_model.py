@@ -8,13 +8,13 @@ See [guillaumekln/faster-whisper](https://github.com/guillaumekln/faster-whisper
 """
 
 from typing import Tuple
+import logging
 import pysubs2
-import whisper
 from pysubs2 import SSAFile, SSAEvent
 from tqdm import tqdm
 
 from subsai.models.abstract_model import AbstractModel
-from subsai.utils import _load_config, get_available_devices
+from subsai.utils import _load_config, select_faster_whisper_runtime
 from faster_whisper import WhisperModel
 
 
@@ -23,11 +23,11 @@ class FasterWhisperModel(AbstractModel):
     config_schema = {
         # load model config
         'model_size_or_path': {
-            'type': list,
+            'type': str,
             'description': 'Size of the model to use (e.g. "large-v2", "small", "tiny.en", etc.)'
                            'or a path to a converted model directory. When a size is configured, the converted'
                            'model is downloaded from the Hugging Face Hub.',
-            'options': whisper.available_models(),
+            'options': None,
             'default': 'base'
         },
         'device': {
@@ -232,24 +232,31 @@ class FasterWhisperModel(AbstractModel):
         self._compute_type = _load_config('compute_type', model_config, self.config_schema)
         self._cpu_threads = _load_config('cpu_threads', model_config, self.config_schema)
         self._num_workers = _load_config('num_workers', model_config, self.config_schema)
+        self._resolved_device, self._resolved_compute_type, runtime_reason = select_faster_whisper_runtime(
+            config_device=self._device,
+            config_compute_type=self._compute_type
+        )
 
         self.transcribe_configs = \
             {config: _load_config(config, model_config, self.config_schema)
              for config in self.config_schema if not hasattr(self, f"_{config}")}
 
-        self.model = WhisperModel(model_size_or_path=self._model_size_or_path,
-                                  device=self._device,
-                                  device_index=self._device_index,
-                                  compute_type=self._compute_type,
-                                  cpu_threads=self._cpu_threads,
-                                  num_workers=self._num_workers)
-
-
         # to show the progress
-        import logging
-
         logging.basicConfig()
         logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
+        logging.getLogger(__name__).info(
+            "faster-whisper runtime resolved: device=%s compute_type=%s (%s)",
+            self._resolved_device,
+            self._resolved_compute_type,
+            runtime_reason
+        )
+
+        self.model = WhisperModel(model_size_or_path=self._model_size_or_path,
+                                  device=self._resolved_device,
+                                  device_index=self._device_index,
+                                  compute_type=self._resolved_compute_type,
+                                  cpu_threads=self._cpu_threads,
+                                  num_workers=self._num_workers)
 
     def transcribe(self, media_file) -> str:
         segments, info = self.model.transcribe(media_file, **self.transcribe_configs)

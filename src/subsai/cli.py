@@ -71,12 +71,23 @@ def run(media_file_arg: List[str],
         translation_configs,
         translation_source_lang,
         translation_target_lang,
-        output_suffix
+        output_suffix,
+        auto_sync,
+        auto_sync_configs
         ):
     files = _handle_media_file(media_file_arg)
     model_configs = _handle_configs(model_configs)
+    if translation_model is not None:
+        translation_configs = _handle_configs(translation_configs)
+    if auto_sync:
+        auto_sync_configs = _handle_configs(auto_sync_configs)
+    else:
+        auto_sync_configs = {}
     print(f"[-] Model name: {model_name}")
     print(f"[-] Model configs: {'defaults' if model_configs == {} else model_configs}")
+    print(f"[-] Auto sync: {auto_sync}")
+    if auto_sync:
+        print(f"[-] Auto sync configs: {'defaults' if auto_sync_configs == {} else auto_sync_configs}")
     print(f"---")
     print(f"[+] Initializing the model")
     model = subs_ai.create_model(model_name, model_configs)
@@ -87,6 +98,9 @@ def run(media_file_arg: List[str],
             print(f"[*] Error: {file} does not exist -> continue".encode('utf-8'))
             continue
         subs = subs_ai.transcribe(file, model)
+        if auto_sync:
+            print(f"[+] Auto-syncing subtitles with media timing".encode('utf-8'))
+            subs = tools.auto_sync(subs=subs, media_file=str(file), **auto_sync_configs)
         if destination_folder is not None:
             folder = pathlib.Path(destination_folder).absolute()
             if not folder.exists():
@@ -104,7 +118,6 @@ def run(media_file_arg: List[str],
                 print(f"[+] Creating translation model: {translation_model}")
                 tr_model = tools.create_translation_model(translation_model)
             print(f"[+] Translating from: {translation_source_lang} to {translation_target_lang}")
-            translation_configs = _handle_configs(translation_configs)
             subs = tools.translate(subs=subs,
                                    source_language=translation_source_lang,
                                    target_language=translation_target_lang,
@@ -144,6 +157,11 @@ def main():
     parser.add_argument('-tc', '--translation-configs', default="{}",
                         help="JSON configuration (path to a json file or a direct "
                              "string)")
+    parser.add_argument('--auto-sync', action='store_true',
+                        help='Auto-sync generated subtitles to media timing using ffsubsync.')
+    parser.add_argument('--auto-sync-configs', default="{}",
+                        help="JSON configuration for auto-sync (path to a json file or a direct "
+                             "string)")
     parser.add_argument('-os', '--output-suffix', default=None, help="Name of the subtitles output file, (In batch processing, this will be used as a suffix to the media filename)")
 
     args = parser.parse_args()
@@ -157,7 +175,9 @@ def main():
         translation_configs=args.translation_configs,
         translation_source_lang=args.translation_source_lang,
         translation_target_lang=args.translation_target_lang,
-        output_suffix=args.output_suffix)
+        output_suffix=args.output_suffix,
+        auto_sync=args.auto_sync,
+        auto_sync_configs=args.auto_sync_configs)
 
     end_time = time.time()
     elapsed_time = end_time - start_time

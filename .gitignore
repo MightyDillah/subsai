@@ -132,3 +132,7 @@ dmypy.json
 _docs
 assets
 .vscode
+
+# Samples
+.mp4
+.mkv

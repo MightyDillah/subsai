@@ -1,5 +1,5 @@
 # ️🎞️ Subs AI 🎞️
- Subtitles generation tool (Web-UI + CLI + Python package) powered by OpenAI's Whisper and its variants 
+ Subtitles generation tool (CLI + Python package) powered by OpenAI's Whisper and its variants 
 <br/>
 <p align="center">
   <img src="./assets/demo/demo.gif">
@@ -10,7 +10,6 @@
 * [Features](#features)
 * [Installation](#installation)
 * [Usage](#usage)
-    * [Web-UI](#web-ui)
     * [CLI](#cli)
     * [From Python](#from-python)
     * [Examples](#examples)
@@ -48,20 +47,6 @@
   * [x] [API/openai/whisper](https://platform.openai.com/docs/guides/speech-to-text)
     * > OpenAI Whisper via their API. Or any other openai-like API for whisper (e.g. [speaches.ai](https://github.com/speaches-ai/speaches))
 
-* Web UI
-  * Fully offline, no third party services 
-  * Works on Linux, Mac and Windows
-  * Lightweight and easy to use
-  * Supports subtitle modification
-  * Integrated tools:
-    * Translation using [xhluca/dl-translate](https://github.com/xhluca/dl-translate):
-      * Supported models:
-        * [x] [facebook/nllb-200-distilled-600M](https://huggingface.co/facebook/nllb-200-distilled-600M) 
-        * [x] [facebook/m2m100_418M](https://huggingface.co/facebook/m2m100_418M)
-        * [x] [facebook/m2m100_1.2B](https://huggingface.co/facebook/m2m100_1.2B)
-        * [x] [facebook/mbart-large-50-many-to-many-mmt](https://huggingface.co/facebook/mbart-large-50-many-to-many-mmt)
-    * Auto-sync using [smacke/ffsubsync](https://github.com/smacke/ffsubsync)
-    * Merge subtitles into the video
 * Command Line Interface
   * For simple or batch processing
 * Python package
@@ -107,26 +92,17 @@ _Quoted from the official openai/whisper installation_
 pip install git+https://github.com/absadiki/subsai
 ```
 > [!NOTE]
-> * It is recommended to use Python 3.10 or 3.11. Versions 3.12 or later may have compatibility issues.
+> * Python 3.10+ is supported, including Python 3.14.
 > * If torch is unable to detect your GPU devices during your usage of subsai, assuming you have a supported GPU device, there is a chance that `pip` installed the CPU version of torch. You can install a torch version with CUDA support by following the [get started locally guide](https://pytorch.org/get-started/locally/) on pytorch.
 > For more information, see https://github.com/absadiki/subsai/issues/162.
 
 # Usage
-### Web-UI
-
-To use the web-UI, run the following command on the terminal
-```shell
-subsai-webui
-```
-And a web page will open on your default browser, otherwise navigate to the links provided by the command
-
-You can also run the Web-UI using [Docker](#docker).
-
 ### CLI
 
 ```shell
 usage: subsai [-h] [--version] [-m MODEL] [-mc MODEL_CONFIGS] [-f FORMAT] [-df DESTINATION_FOLDER] [-tm TRANSLATION_MODEL]
               [-tc TRANSLATION_CONFIGS] [-tsl TRANSLATION_SOURCE_LANG] [-ttl TRANSLATION_TARGET_LANG]
+              [--auto-sync] [--auto-sync-configs AUTO_SYNC_CONFIGS]
               media_file [media_file ...]
 
 positional arguments:
@@ -152,6 +128,9 @@ options:
                         Source language of the subtitles
   -ttl TRANSLATION_TARGET_LANG, --translation-target-lang TRANSLATION_TARGET_LANG
                         Target language of the subtitles
+  --auto-sync           Auto-sync generated subtitles to media timing using ffsubsync.
+  --auto-sync-configs AUTO_SYNC_CONFIGS
+                        JSON configuration for auto-sync (path to a json file or a direct string)
 
 
 ```
@@ -162,6 +141,11 @@ subsai ./assets/test1.mp4 --model openai/whisper --model-configs '{"model_type":
 ```
 > Note: **For Windows CMD**, You will need to use the following :
 > `subsai ./assets/test1.mp4 --model openai/whisper --model-configs "{\"model_type\": \"small\"}" --format srt`
+
+Example with auto-sync enabled:
+```shell
+subsai ./assets/test1.mp4 --format srt --auto-sync --auto-sync-configs '{"vad":"subs_then_silero","max-offset-seconds":120}'
+```
 
 You can also provide a simple text file for batch processing 
 _(Every line should contain the absolute path to a single media file)_
@@ -205,19 +189,18 @@ Simple examples can be found in the [examples](https://github.com/absadiki/subsa
 * Make sure that you have `docker` installed.
 * Prebuilt image
   1. ```docker pull absadiki/subsai:main```
-  2. ```docker run --gpus=all -p 8501:8501 -v /path/to/your/media_files/folder:/media_files absadiki/subsai:main```
+  2. ```docker run --gpus=all -v /path/to/your/media_files/folder:/media_files absadiki/subsai:main --help```
 * Build the image locally 
   1. Clone and `cd` to the repository
   2. ```docker compose build```
-  3. ```docker compose run -p 8501:8501 -v /path/to/your/media_files/folder:/media_files subsai-webui # subsai-webui-cpu for cpu only```
+  3. ```docker compose run --rm -v /path/to/your/media_files/folder:/media_files subsai --help # subsai-cpu for cpu only```
 
 * You can access your media files through the mounted `media_files` folder.
 
 # Notes
 * If you have an NVIDIA graphics card, you may need to install [cuda](https://docs.nvidia.com/cuda/#installation-guides) to use the GPU capabilities.
 * AMD GPUs compatible with Pytorch should be working as well. [#67](https://github.com/absadiki/subsai/issues/67) 
-* Transcription time is shown on the terminal, keep an eye on it while running the web UI. 
-* If you didn't like Dark mode web UI, you can switch to Light mode from `settings > Theme > Light`.
+* Transcription time is shown on the terminal during processing.
 
 # Contributing
 If you find a bug, have a suggestion or feedback, please open an issue for discussion.

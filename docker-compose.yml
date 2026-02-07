@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  subsai-webui:
+  subsai:
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,7 +12,7 @@ services:
             - driver: nvidia
               capabilities: [ gpu ]
 
-  subsai-webui-cpu:
+  subsai-cpu:
     build:
       context: .
       dockerfile: Dockerfile

@@ -278,7 +278,18 @@ class Tools:
                 out_file = in_file.parent / f"{in_file.stem}-subs-merged{in_file.suffix}"
 
             video = str(in_file.resolve())
-            metadata_subs = {'scodec': 'mov_text'} if metadata['codec_name'] == 'h264' else {}
+            output_suffix = out_file.suffix.lower()
+            subtitle_codec_by_container = {
+                '.mp4': 'mov_text',
+                '.m4v': 'mov_text',
+                '.mov': 'mov_text',
+                '.mkv': 'srt',
+                '.webm': 'webvtt',
+            }
+            metadata_subs = {}
+            subtitle_codec = subtitle_codec_by_container.get(output_suffix)
+            if subtitle_codec is not None:
+                metadata_subs['scodec'] = subtitle_codec
             ffmpeg_subs_inputs = []
             for i,lang in enumerate(srtin_files):
                 srtin = srtin_files[lang].name + '.srt'
