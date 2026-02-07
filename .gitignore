@@ -136,3 +136,6 @@ assets
 # Samples
 .mp4
 .mkv
+
+# macOS
+.DS_Store
